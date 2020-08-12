@@ -1,4 +1,4 @@
-# Solved in around 5k episodes
+# See https://github.com/openai/gym/wiki/MountainCar-v0 for details
 
 import random
 import numpy as np
@@ -14,6 +14,8 @@ epsilon = 1.0
 epsilon_decay = 0.99
 alpha = 0.5
 gamma = 0.95
+
+is_trained = True
 
 position_indices_map = dict()
 velocity_indices_map = dict()
@@ -34,11 +36,40 @@ def get_index(Q, state):
 
     return position_indices_map[pos] * len(velocity_indices_map) + velocity_indices_map[vel]
 
-if __name__ == '__main__':
-    env = gym.make('MountainCar-v0')
-    state_space_size = env.observation_space.shape[0]
+def run_trained_agent():
+    Q = np.loadtxt('q-learned.txt')
+
+    for e in range(total_episodes):
+        episode_reward = 0
+        steps = 0
+        done = False
+
+        current_state = env.reset()
+
+        while not done:
+            env.render()
+            steps += 1
+
+            curr_table_idx = get_index(Q, current_state)
+            action = np.argmax(Q[curr_table_idx])
+            
+            next_state, reward, done, _ = env.step(action)
+            episode_reward += reward
+
+            if done:
+                if steps < 200:
+                    print(f'Success in {steps} steps.')
+                break
+            
+            current_state = next_state
+
+        print(f'Episode: {e+1}, Reward: {episode_reward}')
+
+# Solved in around 5k episodes
+def train_agent(env):
+    global epsilon
+
     action_space_size = env.action_space.n
-    
     Q = np.zeros((len(position_indices_map) * len(velocity_indices_map), action_space_size))
 
     total_rewards = []
@@ -90,3 +121,11 @@ if __name__ == '__main__':
 
         if e == 0 or (e+1) % 50 == 0:
             print(f'Episode: {e+1}, Reward: {episode_reward}, Target Reached: {reached_target}, Epsilon: {epsilon}')
+
+if __name__ == '__main__':
+    env = gym.make('MountainCar-v0')
+    
+    if not is_trained:
+        train_agent(env)
+    else:
+        run_trained_agent()
